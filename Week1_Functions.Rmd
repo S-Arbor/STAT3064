@@ -1,0 +1,110 @@
+---
+title: "Week1_Functions"
+author: "Gregory Bell (22973228)"
+date: "2022-09-27"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(GGally)
+library(ggplot2)
+```
+
+```{r}
+aircraft = read.csv("aircraft.csv")
+
+logPower = log10(aircraft$Power)
+logSpan = log10(aircraft$Span)
+logLength = log10(aircraft$Length)
+logWeight = log10(aircraft$Weight)
+logSpeed = log10(aircraft$Speed)
+logRange = log10(aircraft$Range)
+Period = aircraft$Period
+Year = aircraft$Year
+
+logAircraft = data.frame(Year, Period, logPower, logSpan, logLength, logWeight, logSpeed, logRange)
+```
+
+```{r}
+parallel_coord_plot = function(data, columns, group = NULL, box_plot = FALSE, alpha = 0.1){
+  # usage:
+  # data: dataframe
+  # columns: are the columns to include in the plot (in the form: a:b, or c(a,b,c...))
+  # group: is the group by variable, (number of column), can be left blank for no grouping
+  # box_plot: include a box plot or not
+  # alpha: opacity (usually just leave blank)
+  theme( legend.position = "bottom")
+  return(ggparcoord(data, groupColumn = group, columns = columns, alpha = alpha, scale = "globalminmax", boxplot = box_plot) + 
+         theme( legend.position = "bottom") +
+         labs(x = "Variables", y = "Values")
+         )
+}
+```
+
+```{r}
+density_plot = function(data, col){
+  # usage:
+  # data: dataframe
+  # col: the column plot (name of column)
+  return(ggplot(data,aes(x=col)) + geom_histogram() + geom_density() + labs(x = deparse(substitute(col)), y = "Density"))
+}
+```
+
+```{r}
+contour_plot = function(data, x_var, y_var, group = NULL){
+  # usage:
+  # data: dataframe
+  # x_var: x variable (name of column)
+  # y_var: y variable (name of column)
+  # group: variable to colour points by
+  return(
+    ggplot(data, aes(x_var, y_var)) +
+    geom_density_2d( ) +
+    geom_point( aes( colour = group ), alpha = 0.6 ) +
+    theme( legend.position = "bottom") +
+    labs(x = deparse(substitute(x_var)), y = deparse(substitute(y_var)), colour = deparse(substitute(group)))
+    )
+}
+```
+
+```{r}
+multiple_density_plot = function(data, col, group){
+  # usage:
+  # data: dataframe
+  # col: column to ploy (name of column)
+  # group: the variable to group by (name of column)
+  return(
+    ggplot(data, aes(col, group = group) ) +
+    geom_density( aes(fill = group), alpha = 0.4 ) +
+    theme( legend.position = "bottom") +
+    labs(x = deparse(substitute(col)), y = "Density", fill = deparse(substitute(group)))
+  )
+}
+```
+
+```{r}
+pairs_plot = function(data, cols){
+  # usage:
+  # data: dataframe
+  # cols: columns to be used, (in the form: a:b, or c(a,b,c...))
+  return(
+    ggpairs(data, columns = cols, progress = FALSE)
+  )
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
