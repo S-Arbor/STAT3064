@@ -1,0 +1,169 @@
+---
+title: "Week8 Functions"
+author: "Gregory Bell (22973228)"
+date: "2022-09-27"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(dendextend)
+library(tidyverse)
+library(ggplot2)
+library(MASS)
+library(GGally)
+library(dplyr)
+```
+
+```{r}
+aircraft.raw = read.csv("aircraft.csv")
+
+logPower = log10(aircraft.raw$Power)
+logSpan = log10(aircraft.raw$Span)
+logLength = log10(aircraft.raw$Length)
+logWeight = log10(aircraft.raw$Weight)
+logSpeed = log10(aircraft.raw$Speed)
+logRange = log10(aircraft.raw$Range)
+Period = aircraft.raw$Period
+Year = aircraft.raw$Year
+aircraft = data.frame(logPower, logSpan, logLength, logWeight, logSpeed, logRange, Period, Year)
+```
+
+```{r}
+h_cluster_get = function(data, distance, linkage, level){
+  # usage:
+  # data: dataframe
+  # distance: one of "euclidean", "maximum", "manhattan", "canberra", "binary" or "minkowski" (as a string)
+  # linkage: one of "ward.D", "ward.D2", "single", "complete", "average", "mcquitty", "median" or "centroid" (as a string)
+  # level: how many clusters to cut down to
+  return(cutree(as.dendrogram( hclust( dist( data, method = distance ), method = linkage )), k=1:level))
+}
+```
+
+```{r}
+h_cluster_compare = function(clusters, comparison, level = ncol(clusters)){
+  # usage:
+  # clusters: object of clusters cut at a certain level, as returned by h_cluster_get()
+  # comparison: the variable to compare to
+  # level: the number of clusters to look at (default = level of clusters object)
+  return(xtabs( ~ clusters[ , level ] + comparison ))
+}
+```
+
+```{r}
+h_cluster_members = function(clusters, level = ncol(clusters)){
+  # usage:
+  # clusters: object of clusters cut at a certain level, as returned by h_cluster_get()
+  # level: the number of clusters to look at (default = level of clusters object)
+  clusters.fp = as.data.frame(clusters) %>% pivot_longer(cols = 1:level, names_to = "max_clust", values_to = "cluster")
+  return(xtabs( ~ cluster + max_clust, clusters.fp ))
+}
+```
+
+```{r}
+h_cluster_dend_plot_complete = function(data, distance, linkage){
+  # usage:
+  # data: dataframe
+  # distance: one of "euclidean", "maximum", "manhattan", "canberra", "binary" or "minkowski" (as a string)
+  # linkage: one of ward.D", "ward.D2", "single", "complete", "average", "mcquitty", "median" or "centroid" (as a string)
+  return(plot(as.dendrogram( hclust( dist( data, method = distance ), method = linkage ))))
+}
+```
+
+```{r}
+h_cluster_plot = function(clusters, data, x_var, y_var, level = ncol(clusters)){
+  # usage:
+  # clusters: object of clusters cut at a certain level, as returned by h_cluster_get()
+  # data: dataframe
+  # x_var: x variable (name of column)
+  # y_var: y variable (name of column)
+  # level: the number of clusters to plot, maximum of the level of the h_cluster_get() call, default: max clusters
+  return(
+    ggplot(data.frame(data, clus = clusters[,level]), aes(x_var, y_var, colour = factor(clus))) +
+    geom_point() +
+    labs(x = deparse(substitute(x_var)), y = deparse(substitute(y_var)), colour = "Cluster")
+  )
+}
+```
+
+```{r}
+h_cluster_which_observations = function(clusters, data, clust, level = ncol(clusters)){
+  # usage:
+  # clusters: object of clusters cut at a certain level, as returned by h_cluster_get()
+  # data: dataframe
+  # clust: which cluster to look at
+  # level: cluster level to look at
+  return(data[clusters[,level] == clust ,])
+  # extra: if you only want observation numbers, add [,0] on the end of the call to this function
+}
+```
+
+```{r}
+h_cluster_centroids = function(clusters, data, level = ncol(clusters)){
+  # usage:
+  # clusters: object of clusters cut at a certain level, as returned by h_cluster_get()
+  # data: the same dataframe as the h_cluster_get() call
+  # level: number of clusters to look at
+  clus = factor(clusters [,level])
+  data_clus = cbind(data, clus)
+  return(data_clus %>% group_by(clus) %>% summarise_all(mean))
+  # extra: surround this function call in as.matrix, then you have a matrix of the centroids
+}
+```
+
+```{r}
+h_cluster_within_variability = function(clusters, data, level = ncol(clusters)){
+  # usage:
+  # clusters: object of clusters cut at a certain level, as returned by h_cluster_get()
+  # data: the same dataframe as the h_cluster_get() call
+  # level: number of clusters to look at
+  clus = factor(clusters [,level])
+  data_clus = cbind(data, clus)
+  variabilities = data_clus %>% group_by(clus) %>% summarise_all(var)
+  return(apply(variabilities[c(-1)], 1, sum))
+  # note: if NA is returned, it means that the cluster only contains 1 observation, so the within variability is 0
+}
+```
+
+```{r}
+h_cluster_between_variability = function(clusters, data, level = ncol(clusters)){
+  # usage:
+  # clusters: object of clusters cut at a certain level, as returned by h_cluster_get()
+  # data: the same dataframe as the h_cluster_get() call
+  # level: number of clusters to look at
+  centroids = h_cluster_centroids(clusters, data, level)
+  return(diag(var(centroids[c(-1)])))
+}
+```
+
+```{r}
+h_cluster_within_boxplots = function(clusters, data, title = NULL, level = ncol(clusters)){
+  # usage:
+  # clusters: object of clusters cut at a certain level, as returned by h_cluster_get()
+  # data: the same dataframe as the h_cluster_get() call
+  # title: title for plot
+  # level: number of clusters to look at, min 2
+
+  clus = factor(clusters [,level])
+  data_clus = cbind(data, clus)
+  fp_ = pivot_longer(data_clus, cols = 1:ncol(data), names_to = "variable") %>%
+    mutate(variable0 = fct_relevel(variable, names(data)))
+  return(
+    ggplot(fp_, aes(variable0, value, fill=clus)) +
+    geom_boxplot() +
+    labs(x = NULL, y = "Variability", fill = "Clusters", title = title)
+  )
+}
+```
+
+
+
+
+
+
+
+
+
