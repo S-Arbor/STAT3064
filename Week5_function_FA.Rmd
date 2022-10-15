@@ -68,31 +68,34 @@ sigma_hat_sq = function(data, k){
   sigma_h_2 = (1 / (d-k)) * sum(eigen_vals[(k+1):d])
   return(sigma_h_2)
 }
+
+sigma_hat_sq(air, 2)
 ```
 
 ## Principal Axis Factoring
 ```{r}
 ### Code from the lab sheet
 
-S = cov( wine0 ) # wine0 is the scaled wine data
-S
-Om = diag( rep( sigma_hat_sq, 13 ) ) # sigma_hat_sq is value calculated in (c)
-Om
-S_A = S - Om
-S_A
+data= air
+k=2
+principal_axis_loadings <- function(data, k) {
+  d=ncol(data)
+  S = cov( data ) # wine0 is the scaled wine data
+  Om = diag( rep( sigma_hat_sq(data, k), d ) ) # sigma_hat_sq is value calculated in (c)
+  S_A = S - Om
+  
+  ## part 2
+  
+  eig_A = eigen( S_A )
+  Gamma_hat_2 = eig_A$vectors[ ,1:k]
+  Lambda_hat_2 = diag( eig_A$values[1:k]^(1/2) )
+  Ahat = Gamma_hat_2 %*% Lambda_hat_2
+  return(Ahat)
+}
 
-## part 2
-
-eig_A = eigen( S_A )
-eig_A
-Gamma_hat_2 = eig_A$vectors[ ,1:2]
-Gamma_hat_2
-Lambda_hat_2 = diag( eig_A$values[1:2]ˆ(1/2) )
-Lambda_hat_2
-Ahat = Gamma_hat_2 %*% Lambda_hat_2
-Ahat
-biplot( PCA.wine$x, Ahat, col = c("white", "blue") )
-biplot( PCA.wine$x, A[,1:2], col = c("white", "blue") )
+principal_axis_loadings(air, 3)
+##biplot( PCA.wine$x, Ahat, col = c("white", "blue") )
+##biplot( PCA.wine$x, A[,1:2], col = c("white", "blue") )
 
 ```
 

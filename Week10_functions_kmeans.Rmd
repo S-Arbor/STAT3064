@@ -1,0 +1,55 @@
+---
+title: "Week10_Functions_Kmeans"
+author: "Sean Sutton"
+date: '2022-10-14'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Test data
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(MASS)
+```
+
+```{r}
+aircraft_raw <- read.csv("dat/aircraft.csv")
+
+air <- aircraft_raw %>%
+  dplyr::select(3:8) %>%
+  mutate_all(log10) %>% 
+  mutate_all(scale)
+
+head(air)
+```
+
+# Basic kmeans
+
+```{r}
+kk = 4 # number of clusters
+nstart = 25 # number of times to run the algorithm
+data = air # data to cluster
+airclus.out = kmeans( data, centers = kk, nstart = nstart )
+airclus.out
+```
+## Construct a table of cluster sizes by kk
+```{r}
+cluster_sizes <- function(data, kks, nstart) {
+  clus = data.frame()
+  
+  for (kk in kks) {
+    clus.out = kmeans( data, centers = kk, nstart = nstart )
+    clustered.df = data.frame( kk = kk, data, clus_label = clus.out$cluster)
+    clus = rbind( clus, clustered.df )
+  }
+
+  xtabs( ~ clus_label + kk, data = clus )
+}
+
+## e.g.
+cluster_sizes(air, 2:9, 25)
+```
