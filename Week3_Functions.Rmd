@@ -1,0 +1,48 @@
+---
+title: "Week3_Functions"
+author: "Gregory Bell (22973228)"
+date: "2022-10-26"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+scree_plot = function(values){
+  # usage: creates a scree plot of the values given
+  # values: the eigenvalues to plot
+  return(plot(cumsum(values)/sum(values)))
+}
+```
+
+```{r}
+multiple_scatter_plot = function(data, x_var, y_var, group, contour=TRUE){
+  # usage:
+  # data: data frame
+  # x: column of data to be plot as x values
+  # y: column of data to be plot as y values
+  # group: grouping data by
+  # contour: TRUE: shows each group's contour, FALSE: shows the overall contour
+  # example: multiple_scatter_plot(aircraft, log10(aircraft$Power), log10(aircraft$Speed), aircraft$Period)
+  if (contour) {
+    return(ggplot(data, aes(x_var, y_var, colour = as.factor(group))) +
+    geom_point() +
+    geom_density2d() +
+    labs(x = deparse(substitute(x_var)), y = deparse(substitute(y_var)), colour = deparse(substitute(group)))
+    )
+  }
+  else{
+    return(ggplot(data, aes(x_var, y_var, colour = as.factor(group))) +
+    geom_point() +
+    geom_density2d(color=1, alpha=0.5) +
+    labs(x = deparse(substitute(x_var)), y = deparse(substitute(y_var)), colour = deparse(substitute(group)))
+    )
+  }
+}
+```
+
+```{r}
+multiple_scatter_plot(aircraft, log10(aircraft$Power), log10(aircraft$Speed), aircraft$Period)
+```
