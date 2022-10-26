@@ -37,6 +37,7 @@ parallel_coord_plot = function(data, columns, group = NULL, box_plot = FALSE, al
   # group: is the group by variable, (number of column), can be left blank for no grouping
   # box_plot: include a box plot or not
   # alpha: opacity (usually just leave blank)
+  # example: parallel_coord_plot(aircraft, 3:8, 2)
   theme( legend.position = "bottom")
   return(ggparcoord(data, groupColumn = group, columns = columns, alpha = alpha, scale = "globalminmax", boxplot = box_plot) + 
          theme( legend.position = "bottom") +
@@ -50,6 +51,7 @@ density_plot = function(data, col){
   # usage:
   # data: dataframe
   # col: the column plot (name of column)
+  # example: density_plot(aircraft, aircraft$Speed)
   return(ggplot(data,aes(x=col)) + geom_histogram() + geom_density() + labs(x = deparse(substitute(col)), y = "Density"))
 }
 ```
@@ -61,6 +63,7 @@ contour_plot = function(data, x_var, y_var, group = NULL){
   # x_var: x variable (name of column)
   # y_var: y variable (name of column)
   # group: variable to colour points by
+  # example: contour_plot(aircraft, aircraft$Speed, aircraft$Span, aircraft$Period)
   return(
     ggplot(data, aes(x_var, y_var)) +
     geom_density_2d( ) +
@@ -75,8 +78,9 @@ contour_plot = function(data, x_var, y_var, group = NULL){
 multiple_density_plot = function(data, col, group){
   # usage:
   # data: dataframe
-  # col: column to ploy (name of column)
+  # col: column to plot (name of column)
   # group: the variable to group by (name of column)
+  # example: multiple_density_plot(aircraft, aircraft$Speed, aircraft$Period)
   return(
     ggplot(data, aes(col, group = group) ) +
     geom_density( aes(fill = group), alpha = 0.4 ) +
@@ -91,6 +95,7 @@ pairs_plot = function(data, cols){
   # usage:
   # data: dataframe
   # cols: columns to be used, (in the form: a:b, or c(a,b,c...))
+  # example: pairs_plot(aircraft, 1:8)
   return(
     ggpairs(data, columns = cols, progress = FALSE)
   )
@@ -100,6 +105,9 @@ pairs_plot = function(data, cols){
 
 
 
+```{r}
+pairs_plot(aircraft, 1:8)
+```
 
 
 

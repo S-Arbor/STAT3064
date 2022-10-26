@@ -1,0 +1,102 @@
+---
+title: "Week2_Functions"
+author: "Gregory Bell (22973228)"
+date: "2022-10-26"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(matlib)
+# required for the inv function
+library(MASS)
+# required for mvrnorm
+```
+
+```{r}
+sigma_pow = function(sigma0, pow){
+  # usage:
+  # sigma0: the sigma matrix to be decomposed and reconstructed to a power
+  # pow: the power to raise the sigma matrix to (can be negative)
+  S0eigen = eigen(sigma0)
+  S0values = S0eigen$values
+  S0vectors = S0eigen$vectors
+  if (pow < 0){
+    return(S0vectors %*% inv(diag(S0values))^abs(pow) %*% t(S0vectors))
+  }
+  else {
+    return(S0vectors %*% diag(S0values)^pow %*% t(S0vectors))
+  }
+}
+```
+
+```{r}
+eigen_sim = function(sigma, n, Nreps){
+  # usage:
+  # sigma: the sigma matrix to sample from
+  # n: the number of repetitions to do on for each set of eigenvalues
+  # Nreps: the number of overall repetitions
+  results = data.frame()
+  for( i in 1:Nreps ) {
+    Samp = mvrnorm(n = n, mu = rep(0,nrow(sigma)), Sigma = sigma ) # generate sample
+    pca.XX = prcomp(Samp)
+    eigvals = pca.XX$sdev ^ 2 # prcomp gives us the standard deviations, so square them
+    cond = eigvals[1]/eigvals[nrow(sigma)]
+    temp = data.frame( replication = i,
+                           cond.number = cond)
+    for (j in 1:nrow(sigma)) {
+      temp[, ncol(temp)+1] <- eigvals[j]
+    }
+    results = rbind(results, temp) # add the new dataframe at the bottom of the old one
+  }
+  return(results)
+}
+```
+
+
+# Testing
+```{r}
+aircraft = read.csv("aircraft.csv")
+
+logPower = log10(aircraft$Power)
+logSpan = log10(aircraft$Span)
+logLength = log10(aircraft$Length)
+logWeight = log10(aircraft$Weight)
+logSpeed = log10(aircraft$Speed)
+logRange = log10(aircraft$Range)
+
+logAircraft = data.frame(logPower, logSpan, logLength, logWeight, logSpeed, logRange)
+```
+
+```{r}
+(sigma = cov(logAircraft))
+```
+
+```{r}
+sigma_pow(sigma, -1)
+```
+
+```{r}
+vals = eigen(sigma)$values
+```
+
+```{r}
+
+Sigma0 = matrix(c(
+ 3.1386518, 0.38872659, 0.6178228, 1.7576847, 0.77433973, 0.7508789,
+ 0.3887266, 1.21417949, 0.1941453, 0.4518920, 0.01236855, 0.2155466,
+ 0.6178228, 0.19414529, 1.2437919, 0.5970320, 0.15151088, 0.2665018,
+ 1.7576847, 0.45189196, 0.5970320, 1.7083497, 0.52685668, 0.7109476,
+ 0.7743397, 0.01236855, 0.1515109, 0.5268567, 0.53406192, 0.2299193,
+ 0.7508789, 0.21554658, 0.2665018, 0.7109476, 0.22991933, 0.6642375),
+ byrow = TRUE, nrow = 6 )
+
+results = eigen_sim(Sigma0, 100, 200)
+```
+
+
+
+
