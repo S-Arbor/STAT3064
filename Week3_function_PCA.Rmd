@@ -92,3 +92,53 @@ ggplot(data.frame(pc$x), aes(PC1, PC2, color=as.factor(aircraft$Period))) +
 ```{r}
 biplot(pc, col=c("white", "blue"))
 ```
+
+## Generating samples from the normal distribution
+```{r}
+Sigma0 = matrix(c(
+ 3.1386518, 0.38872659, 0.6178228, 1.7576847, 0.77433973, 0.7508789,
+ 0.3887266, 1.21417949, 0.1941453, 0.4518920, 0.01236855, 0.2155466,
+ 0.6178228, 0.19414529, 1.2437919, 0.5970320, 0.15151088, 0.2665018,
+ 1.7576847, 0.45189196, 0.5970320, 1.7083497, 0.52685668, 0.7109476,
+ 0.7743397, 0.01236855, 0.1515109, 0.5268567, 0.53406192, 0.2299193,
+ 0.7508789, 0.21554658, 0.2665018, 0.7109476, 0.22991933, 0.6642375),
+ byrow = TRUE, nrow = 6 )
+```
+
+```{r}
+n = 250 # number of observations
+Sigma = Sigma0 # covariance matrix
+mu = rep(0, 6) # the means of each variable
+normal_sample <- mvrnorm(n=n, mu = mu, Sigma = Sigma)
+summary(normal_sample)
+```
+
+## Generating samples from the t-distribution
+```{r}
+Sigma0sym = 0.5* (Sigma0 + t(Sigma0))
+Xmat = rmvt(100, sigma = Sigma0sym, df = 6)
+summary(Xmat)
+```
+
+## Plot density by group
+```{r}
+multiple_density_plot = function(data, col, group){
+  # usage:
+  # data: dataframe
+  # col: column to ploy (name of column)
+  # group: the variable to group by (name of column)
+  return(
+    ggplot(data, aes(data[,col], group = group) ) +
+    geom_density( aes(fill = group), alpha = 0.4 ) +
+    theme( legend.position = "bottom") +
+    labs(x = deparse(substitute(col)), y = "Density", fill = deparse(substitute(group)))
+  )
+}
+
+multiple_density_plot(data.frame(pc$x), 1, as.factor(aircraft$Period))
+```
+
+## Plot density iteratively
+```{r}
+
+```

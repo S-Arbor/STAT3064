@@ -1,0 +1,162 @@
+---
+title: "Week 4 Functions PCR"
+author: "Sean Sutton"
+date: '2022-10-27'
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Setup
+
+## Libraries
+```{r}
+library(tidyverse)
+library(dplyr)
+```
+
+## Example Data
+```{r}
+raw_tumour <- read.delim("dat/tumour.csv", header=FALSE)
+tumour <- data.frame(t(raw_tumour))
+head(tumour)
+```
+```{r}
+coln = c(
+"Sex", # nominal M, F, and I (infant)
+"Length", # continuous mm Longest shell measurement
+"Diameter", # continuous mm perpendicular to length
+"Height", # continuous mm with meat in shell
+"Whole_weight", # continuous grams whole abalone
+"Shucked_weight", # continuous grams weight of meat
+"Viscera_weight", # continuous grams gut weight (after bleeding)
+"Shell_weight", # continuous grams after being dried
+"Rings" # integer +1.5 gives the age in years
+)
+abalone <- read.csv("dat/abalone.csv", col.names = coln)
+abalone$Sex <- as.factor(abalone$Sex)
+head(abalone)
+```
+# Finding an outlier
+
+## Plotting with labels
+```{r}
+## Basic
+tumourPC <- prcomp(tumour)
+tumourPC.X <- data.frame(tumourPC$x)
+ggplot(tumourPC.X, aes(PC1, PC2, label=1:nrow(tumourPC.X))) +
+  geom_point() +
+  geom_text(hjust=1.2)
+```
+```{r}
+## ggrepel can prevent large amounts of overlaps, with max.overlaps=1 will only show point 54
+library(ggrepel)
+ggplot(tumourPC.X, aes(PC1, PC2, label=1:nrow(tumourPC.X))) +
+  geom_point() +
+  geom_label_repel(box.padding   = 0.35, 
+                  point.padding = 0.5,
+                  segment.color = 'grey50', max.overlaps = 20) +
+  theme_classic()
+
+```
+## Check how many standard deviations from the mean obserations are
+```{r}
+order_by_sds <- function(PC1_scores) {
+  abs_stds_from_mean = abs(PC1_scores - mean(PC1_scores)) / sd(PC1_scores)
+  obs_order = order(-abs_stds_from_mean)
+  return_df = data.frame(obs = obs_order, abs_stds = abs_stds_from_mean[obs_order])
+  return(return_df)
+}
+order_by_sds(tumourPC.X$PC1)
+```
+
+# Regression
+
+## Standard forward selection
+```{r}
+## define the current model, define the scope, add1 with the test, then update the model with the new value
+fm.null <- lm(Rings ~ 1, abalone)
+fm.full <- lm(Rings ~ Length + Height + Whole_weight +
+                    Shucked_weight + Viscera_weight + Shell_weight, abalone)
+add1(fm.null, fm.full, test="F")
+fm.fwd <- update(fm.null, .~. + Shell_weight)
+summary(fm.fwd)
+## Here shell weight has the highest score so we add it
+```
+
+## Automated forward selection
+```{r}
+model_formula_length = function(model) nchar(as.character(model$call$formula[3]))
+
+run_forward_selection <- function(fm.null, fm.full) {
+  fm.fwd <- fm.null
+  modelno = 0
+  glancerows = data.frame()
+  
+  print(summary( lm(fm.fwd) ))
+  row = data.frame(modelno = modelno, sigma = glance( lm( fm.fwd ) )$sigma, var_added ="")
+  glancerows = rbind(glancerows, row)
+  
+  while (model_formula_length(fm.fwd) != model_formula_length(fm.full)) {
+    modelno = modelno + 1
+    
+    ## compute the next variable
+    next_var_eval <- add1(fm.fwd, fm.full, test="F")
+    next_var_idx <- which.max(next_var_eval$'F value')
+    next_var <- row.names(next_var_eval)[next_var_idx]
+    
+    ## add the variable to the model
+    fm.fwd <- update(fm.fwd, paste(".~. + ", next_var))
+    print(summary( lm(fm.fwd) ))
+    row = data.frame(modelno = modelno, sigma = glance( lm( fm.fwd ) )$sigma, var_added = next_var)
+    glancerows = rbind(glancerows, row)
+  }
+  colnames(glancerows) <- c("Model", "Residual Standard Deviation", "Variable Added")
+  return(glancerows)
+}
+```
+
+```{r}
+basic_reg_perf <- run_forward_selection(fm.null, fm.full)
+basic_reg_perf
+```
+## Standard PCR
+```{r}
+## To carry out PCR manually, just add your PC variables into the model in ascending order
+abalone.subset <- abalone[c("Length", "Height", "Whole_weight", "Shucked_weight", "Viscera_weight", "Shell_weight")]
+abalone.pr <- prcomp(abalone.subset)
+abalone.pr.df <- cbind(abalone[c("Rings")], abalone.pr$x)
+
+model.null <- lm(Rings ~ 1, data=abalone.pr.df)
+model.null
+
+model.fwd <- update(model.null, .~. + PC1)
+summary(model.fwd)
+```
+## Automated PCR
+```{r}
+automated_PCR <- function(pc, response) {
+  full_df <- data.frame(cbind(response, pc$x))
+  colnames(full_df)[1] <- "Y"
+  model.fwd <- lm(Y ~ 1, data=full_df)
+  pcr_perf <- data.frame(PC_scores_added = 0, sigma = glance(model.fwd)$sigma, key_var = "")
+  
+  for (i in 1:ncol(pc$x)) {
+    model.fwd <- update(model.fwd, paste(".~. + PC", i, sep=""))
+    
+    max_contri <- row.names(pc$rotation)[which.max(abs(pc$rotation[,i]))]
+    
+    row = data.frame(PC_scores_added = i, sigma = glance( lm( model.fwd ) )$sigma, key_var = max_contri)
+    pcr_perf = rbind(pcr_perf, row)
+  }
+  
+  return(pcr_perf)
+}
+```
+```{r}
+## e.g.
+abalone.pr <- prcomp(abalone.subset)
+automated_PCR(abalone.pr, abalone$Rings)
+```
