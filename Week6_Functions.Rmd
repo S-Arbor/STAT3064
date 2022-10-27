@@ -1,0 +1,145 @@
+---
+title: "Week6_Functions"
+author: "Gregory Bell (22973228)"
+date: "2022-10-27"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(dplyr)
+```
+
+
+```{r}
+Chat_calculate = function(data1, data2){
+  # usage: calculates the chat matrix from the data given
+  # data1: the first set of data
+  # data2: the second set of data
+  # example:  Chat_calculate(air1, air2)
+  S1 = cov(data1)
+  S2 = cov(data2)
+  spectral1 = eigen(S1)
+  spectral2 = eigen(S2)
+  V1 = spectral1$vectors
+  V2 = spectral2$vectors
+  lambda1 = spectral1$values
+  lambda2 = spectral2$values
+  sqrtS1inv = V1 %*% diag(sqrt(1/lambda1)) %*% t(V1)
+  sqrtS2inv = V2 %*% diag(sqrt(1/lambda2)) %*% t(V2)
+  return(sqrtS1inv %*% cov(air1, air2) %*% sqrtS2inv)
+}
+```
+
+```{r}
+U_and_V_calculate = function(data1, data2){
+  # usage: calculates the U and V values from the data given
+  # data1: the first set of data
+  # data2: the second set of data
+  # example: U_and_V_calculate(air1,air2)
+  CCA = cancor(data1, data2)
+  data1mat = as.matrix(data1, ncol = ncol(data1) ) # change the class to matrix
+  data2mat = as.matrix(data2, ncol = ncol(data2) )
+  
+  U = data1mat %*% CCA$xcoef
+  V = data2mat %*% CCA$ycoef
+  dimnames( U )[[2]] = paste0( "CCx.", 1:ncol(data1) )
+  dimnames( V )[[2]] = paste0( "CCx.", 1:ncol(data2) )
+  return(list(U=U,V=V))
+}
+```
+
+```{r}
+SVD_from_data = function(data1, data2){
+  # usage: calculates the Singular Value Decomposition from the data given
+  # data1: the first set of data
+  # data2: the second set of data
+  # example: SVD_from_data(air1,air2)
+  chat = Chat_calculate(data1, data2)
+  return(svd(chat)$d)
+}
+```
+
+```{r}
+SVD_from_chat = function(chat){
+  # usage: calculates the Singular Value Decomposition from the given Chat matrix
+  # chat: the Chat matrix to use
+  # example: SVD_from_chat(air.chat)
+  return(svd(chat)$d)
+}
+```
+
+
+# Testing
+
+```{R}
+aircraft_raw = read.csv("aircraft.csv")
+
+logPower = log10(aircraft_raw$Power)
+logSpan = log10(aircraft_raw$Span)
+logLength = log10(aircraft_raw$Length)
+logWeight = log10(aircraft_raw$Weight)
+logSpeed = log10(aircraft_raw$Speed)
+logRange = log10(aircraft_raw$Range)
+Period = aircraft_raw$Period
+Year = aircraft_raw$Year
+
+aircraft = data.frame(logPower, logSpan, logLength, logWeight, logSpeed, logRange)
+```
+
+```{r}
+aircraft.centred = mutate( aircraft,
+               logSpan = logSpan - mean( logSpan ),
+               logPower = logPower - mean( logPower ),
+               logLength = logLength - mean( logLength ),
+               logWeight = logWeight - mean( logWeight ),
+               logSpeed = logSpeed - mean( logSpeed ),
+               logRange = logRange - mean( logRange )
+)
+```
+
+```{r}
+air.rearranged = dplyr::select (aircraft.centred, 
+                                logSpan, 
+                                logLength, 
+                                logWeight, 
+                                logPower, 
+                                logSpeed, 
+                                logRange ) 
+# need dplyr:: because otherwise MASS hides this function
+```
+
+```{r}
+air1 = air.rearranged[,0:3]
+air2 = air.rearranged[,4:6]
+```
+
+
+```{r}
+chat = Chat_calculate(air1, air2)
+```
+
+```{r}
+svd(chat)
+```
+
+```{r}
+SVD_from_data(air1,air2)
+```
+
+
+```{r}
+UandV = U_and_V_calculate(air.rearranged[,1:5],air.rearranged[,5:6])
+```
+
+```{r}
+head(UandV$U)
+head(UandV$V)
+```
+
+
+
+
