@@ -13,6 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 library(tidyverse)
 library(ggplot2)
+library(GGally)
 library(MASS)
 ```
 
@@ -35,6 +36,9 @@ nstart = 25 # number of times to run the algorithm
 data = air # data to cluster
 airclus.out = kmeans( data, centers = kk, nstart = nstart )
 airclus.out
+
+# from here can access within cluster variability ($tot.withinss) and between cluster variability ($betweenss)
+# or centres ($centers) or variabilities ($withinss)
 ```
 ## Construct a table of cluster sizes by kk
 ```{r}
@@ -52,4 +56,42 @@ cluster_sizes <- function(data, kks, nstart) {
 
 ## e.g.
 cluster_sizes(air, 2:9, 25)
+```
+
+```{r}
+airclus.out$centers
+```
+## Graph within or between cluster variability
+```{r}
+cluster_stats <- function(data, kks, nstart) {
+  stats = data.frame()
+  
+  for (kk in kks) {
+    clus.out = kmeans( data, centers = kk, nstart = nstart )
+    new_row = data.frame( kk = kk, within_cluster_variability = clus.out$tot.withinss,
+                          between_cluster_variability = clus.out$betweenss)
+    stats = rbind( stats, new_row )
+  }
+
+  return(stats)
+}
+
+# get these stats and then just use ggplot to create a basic plot
+c_stats <- cluster_stats(air, 2:9, 25)
+ggplot(c_stats, aes(kk, within_cluster_variability)) +
+  geom_line()
+```
+
+## Parallel coordinate plot of cluster centres
+```{r}
+plot_centers <- function(centers) {
+  n_clusters = nrow(centers)
+  n_vars = ncol(centers)
+  centers2 <- data.frame(centers)
+  centers2$cluster <- as.factor(1:n_clusters)
+  ggparcoord(centers2, columns=1:n_vars, groupColumn = n_vars+1)
+}
+
+centers <- kmeans(air, centers = 7, nstart = 25)$centers
+plot_centers(centers)
 ```
