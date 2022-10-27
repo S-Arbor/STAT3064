@@ -137,14 +137,20 @@ summary(model.fwd)
 ```
 ## Automated PCR
 ```{r}
+# to use this function, input the prcomp output and the response variable
+# will return the performance of the model for each number of PC scores in a table
+# delete comments to print out extra model info as it runs
+
 automated_PCR <- function(pc, response) {
   full_df <- data.frame(cbind(response, pc$x))
   colnames(full_df)[1] <- "Y"
   model.fwd <- lm(Y ~ 1, data=full_df)
   pcr_perf <- data.frame(PC_scores_added = 0, sigma = glance(model.fwd)$sigma, key_var = "")
+  # print(summary(model.fwd))
   
   for (i in 1:ncol(pc$x)) {
     model.fwd <- update(model.fwd, paste(".~. + PC", i, sep=""))
+    # print(summary(model.fwd))
     
     max_contri <- row.names(pc$rotation)[which.max(abs(pc$rotation[,i]))]
     
@@ -154,8 +160,7 @@ automated_PCR <- function(pc, response) {
   
   return(pcr_perf)
 }
-```
-```{r}
+
 ## e.g.
 abalone.pr <- prcomp(abalone.subset)
 automated_PCR(abalone.pr, abalone$Rings)

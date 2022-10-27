@@ -50,14 +50,18 @@ loadings.2
 ```{r}
 # just run varimax(loadings)
 # note you will have to access your new loadings with $loadings
-# if you only want the loadings for variables further restrict with this with [1:n_vars,]
 varimax(loadings.2)$loadings
-varimax(loadings.2)$loadings[1:6,]
+```
+```{r}
+# if you only want the loadings for variables in an array further restrict with this with [1:n_vars,]
+loadings.2.varimax <- varimax(loadings.2)$loadings[1:6,]
+loadings.2.varimax
 ```
 ### Display these loadings
 ```{r}
 # use biplot(loadings, loadings), e.g.
 biplot(loadings.2, loadings.2)
+biplot(loadings.2.varimax, loadings.2.varimax)
 ```
 ### sigma_hat_sq
 ```{r}
@@ -80,11 +84,9 @@ data= air
 k=2
 principal_axis_loadings <- function(data, k) {
   d=ncol(data)
-  S = cov( data ) # wine0 is the scaled wine data
-  Om = diag( rep( sigma_hat_sq(data, k), d ) ) # sigma_hat_sq is value calculated in (c)
+  S = cov( data )
+  Om = diag( rep( sigma_hat_sq(data, k), d ) )
   S_A = S - Om
-  
-  ## part 2
   
   eig_A = eigen( S_A )
   Gamma_hat_2 = eig_A$vectors[ ,1:k]
@@ -93,9 +95,7 @@ principal_axis_loadings <- function(data, k) {
   return(Ahat)
 }
 
-principal_axis_loadings(air, 3)
-##biplot( PCA.wine$x, Ahat, col = c("white", "blue") )
-##biplot( PCA.wine$x, A[,1:2], col = c("white", "blue") )
+principal_axis_loadings(air, 2)
 
 ```
 
@@ -103,6 +103,12 @@ principal_axis_loadings(air, 3)
 ## ML factors
 
 ```{r}
-factanal(wine, 2)
+# plan ML factor loadings
+factanal( air, factors = 2, rotation = "none", scores = "regression" )
 
+# varimax orthogonal
+factanal( air, factors = 2, rotation = "varimax", scores = "regression" )
+
+# varimax optimal oblique
+factanal( air, factors = 2, rotation = "promax", scores = "regression" )
 ```
