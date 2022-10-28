@@ -70,65 +70,53 @@ xtabs( ~ qda.preds.0 + air$Period )
 ```
 ## Fisher's LDA
 ```{r}
+# note this function takes a long time to run, must be something being done listwise rather than vectorised??
+# also B = ( 3 - 1 ) * cov (mu ) this line might be wrong for different d and k, literally cannot the correct numbers to scale 3 and 1 anywhere :/
+# will have to ask Tuesday
+fishers_lda = function(data, classes) {
+  Ws = list()
+  mus = list()
+  for (class in unique(classes)) {
+    data.subset = data[classes == class,]
+    Ws[[class]] = cov(data.subset)
+    mus[[class]] = colMeans(data.subset)
+  }
+  W = Reduce("+", Ws) # just takes the sum
+  mu = Reduce(rbind, mus)
+  B = ( 3 - 1 ) * cov (mu )
+  Q = solve(W, B)
+  eta = eigen(Q)$vectors[,1]
+  
+  XX = data
+  XXproj = as.matrix( XX ) %*% as.matrix( eta )
+  muPs = list()
+  ms = list()
+  tXXproj = t( XXproj )
+  for (class in classes) {
+    muPs[[class]] = t(as.matrix(mus[[class]])) %*% as.matrix(eta)
+    ms[[class]] = as.data.frame(tXXproj) - muPs[[class]]
+  }
+  
+  mm = abs(Reduce(rbind, ms))
+  assigned = sapply( mm, which.min )
+  classified = data.frame( assigned = assigned, true_classes = classes )
+  
+  return(classified)
+}
+
 data = air[,3:8]
 classes = air$Period
-Ws = list()
-mus = list()
-for (class in unique(classes)) {
-  data.subset = data[classes == class,]
-  Ws[[class]] = cov(data.subset)
-  mus[[class]] = colMeans(data.subset)
-}
-W = Reduce("+", Ws) # just takes the sum
-mu = Reduce(rbind, mus)
-B = ( 3 - 1 ) * cov (mu )
-Q = solve(W, B)
-eta = eigen(Q)$vectors[,1]
-
-XX = data
-XXproj = as.matrix( XX ) %*% as.matrix( eta )
-muPs = list()
-ms = list()
-tXXproj = t( XXproj )
-for (class in classes) {
-  muPs[[class]] = t(as.matrix(mus[[class]])) %*% as.matrix(eta)
-  ms[[class]] = as.data.frame(tXXproj) - muPs[[class]]
-}
-
-mm = abs(Reduce(rbind, ms))
-assigned = sapply( mm, which.min )
-classified = data.frame( assigned = assigned, true_classes = classes )
+classified = fishers_lda(data, classes)
 xtabs( ~ assigned + true_classes , data = classified)
 ```
 
-
+## Using CV=TRUE with lda
 ```{r}
-W1 = cov( dplyr::select( dplyr::filter( aircraft, Period == 1 ), -Year, -Period ) )
-W2 = cov( dplyr::select( dplyr::filter( aircraft, Period == 2 ), -Year, -Period ) )
-W3 = cov( dplyr::select( dplyr::filter( aircraft, Period == 3 ), -Year, -Period ) )
-W = W1 + W2 + W3
-
-mu1 = colMeans( dplyr::select( dplyr::filter( aircraft, Period == 1 ), -Year, -Period ) )
-mu2 = colMeans( dplyr::select( dplyr::filter( aircraft, Period == 2 ), -Year, -Period ) )
-mu3 = colMeans( dplyr::select( dplyr::filter( aircraft, Period == 3 ), -Year, -Period ) )
-mu = rbind( mu1, mu2, mu3 )
-B = ( 3 - 1 ) * cov (mu )
-
-Q = solve(W, B)
-eta = eigen(Q)$vectors[,1]
-XX = dplyr::select( aircraft, -Year, -Period )
-XXproj = as.matrix( XX ) %*% as.matrix( eta )
-muP1 = t( as.matrix( mu1 ) ) %*% as.matrix( eta )
-muP2 = t( as.matrix( mu2 ) ) %*% as.matrix( eta )
-muP3 = t( as.matrix( mu3 ) ) %*% as.matrix( eta )
-tXXproj = t( XXproj )
-m1 = as.data.frame( tXXproj ) - muP1
-m2 = as.data.frame( tXXproj ) - muP2
-m3 = as.data.frame( tXXproj ) - muP3
-mm = rbind( abs( m1 ), abs( m2 ), abs( m3 ) )
-classes.2 = sapply( mm, which.min )
-classified = data.frame( assigned = classes, aircraft )
-xtabs( ~ assigned + Period , data = classified)
+# if you do this you no longer use predict to get your predictions since they are already in the lda object
+# instead just access them with lda(...)$class
+lda.cv.0 = lda( Period ~ Power + Span + Length + Weight + Speed + Range, data = air, CV=TRUE )
+xtabs( ~ lda.cv.0$class + aircraft$Period )
 ```
+
 
 
