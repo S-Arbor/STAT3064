@@ -83,7 +83,7 @@ fishers_lda = function(data, classes) {
   }
   W = Reduce("+", Ws) # just takes the sum
   mu = Reduce(rbind, mus)
-  B = ( 3 - 1 ) * cov (mu )
+  B = (length(mus) - 1) *cov(mu)##( 3 - 1 ) * cov (mu )
   Q = solve(W, B)
   eta = eigen(Q)$vectors[,1]
   
