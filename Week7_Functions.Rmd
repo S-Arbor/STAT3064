@@ -1,0 +1,89 @@
+---
+title: "Week7_Functions"
+author: "Gregory Bell (22973228)"
+date: "2022-10-28"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+Chat_calculate = function(data1, data2){
+  # usage: calculates the chat matrix from the data given
+  # data1: the first set of data
+  # data2: the second set of data
+  # example:  Chat_calculate(air1, air2)
+  S1 = cov(data1)
+  S2 = cov(data2)
+  spectral1 = eigen(S1)
+  spectral2 = eigen(S2)
+  V1 = spectral1$vectors
+  V2 = spectral2$vectors
+  lambda1 = spectral1$values
+  lambda2 = spectral2$values
+  sqrtS1inv = V1 %*% diag(sqrt(1/lambda1)) %*% t(V1)
+  sqrtS2inv = V2 %*% diag(sqrt(1/lambda2)) %*% t(V2)
+  return(sqrtS1inv %*% cov(air1, air2) %*% sqrtS2inv)
+}
+```
+
+```{r}
+Correlation_Coef_test = function( k, n, d1, d2, vv ){
+  # usage: tests the k+1'th correlation coefficient to see if it is zero or not
+  # - if the p-value is greater than 0.05, it is likely to be zero,
+  # - if the p-value is less than 0.05, it is not zero
+  # k: the k+1'th correlation coefficient to test
+  # n: the number of observations in the dataset being analysed
+  # d1: the number of dimensions of the first set of data
+  # d2: the number of dimensions of the second set of data
+  # vv: is vector of singular values of Chat (returned by cancor in the component $cor)
+  #
+  # example: Tk( k = 1, n = 709, d1 = 3, d2 = 3, vv = cancor( X1, X2 )$cor)
+  # d1 is the dimension of X1
+  # d2 is the dimension of X2
+  rr = length( vv )
+  Tkout = - ( n - ( d1 + d2 + 3 )/2 ) * log( prod ( 1 - vv[ (k + 1) : rr ]^2 ) )
+  # compare with chisq on (d1 - k ) * (d2 - k ) dof
+  dof = ( d1 - k ) * ( d2 - k )
+  pval = pchisq( Tkout, df = dof, lower.tail = FALSE )
+  return(list( Tkout = Tkout, pval = pval, dof = dof ))
+}
+```
+
+```{r}
+Plot_Multiple_Cols = function(a, a_range, b, b_range){
+  # usage: plots multiple cols from one dataset against multiple cols of another dataset
+  # a: the dataset to be on the x-axis
+  # a_range: the range of columns of a to plot (in the form a:b)
+  # b: the dataset to be on the y-axis
+  # b_range: the range of columns of b to plot (in the form a:b)
+  # example: Plot_Multiple_Cols(CC_calc(X1, X2)$U, 1:2, CC_calc(X1, X2)$V, 1:2)
+  # which plots (U1,V1), (U1,V2), (U2,V1), (U2,V2) in separate plots
+  for (x in a_range) {
+    for (y in b_range) {
+      plot(a[,x], b[,y], ylab=sprintf("Y[,%s]", y), xlab=sprintf("X[,%s]", x))
+    }
+  }
+}
+```
+
+```{r}
+# replaces week 6 U_and_V_calculate
+CC_calculate = function(data1, data2){
+  # usage: calculates the U and V values, and the phis and psis from the data given
+  # data1: the first set of data
+  # data2: the second set of data
+  # example: CC_calculate(air1,air2)
+  CCA = cancor(data1, data2)
+  data1mat = as.matrix(data1, ncol = ncol(data1) ) # change the class to matrix
+  data2mat = as.matrix(data2, ncol = ncol(data2) )
+  
+  U = data1mat %*% CCA$xcoef
+  V = data2mat %*% CCA$ycoef
+  dimnames( U )[[2]] = paste0( "CCx.", 1:ncol(data1) )
+  dimnames( V )[[2]] = paste0( "CCx.", 1:ncol(data2) )
+  return(list(U=U, V=V, phis=CCA$xcoef, psis=CCA$ycoef))
+}
+```
