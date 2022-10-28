@@ -21,13 +21,19 @@ library(tidyverse)
 
 ```{r}
 aircraft_raw <- read.csv("dat/aircraft.csv")
+wine_raw <- read.csv("dat/wine.tsv", header=FALSE)
 
 air <- aircraft_raw %>%
   dplyr::select(3:8) %>%
   mutate_all(log10) %>% 
   mutate_all(scale)
 
+wine <- wine_raw %>%
+  dplyr::select(2:14) %>%
+  mutate_all(scale)
+
 head(air)
+head(wine)
 ```
 
 ## PCFA Factor loadings
@@ -35,23 +41,27 @@ head(air)
 ### Get the PCFA loadings
 
 ```{r}
-PCFA_loadings = function(data, n_loadings, scale){
+PCFA_loadings = function(data, n_loadings){
   "Calculate the first n_loadings PCFA loadings"
-  pc <- prcomp(data, scale. = scale)
-  loadings <- pc$rotation[,1:n_loadings]
-  return(loadings)
+  eig <- eigen(cov(data))
+  vecs <- eig$vectors
+  triangle <- diag(eig$values) ^ 0.5
+  loadings <- vecs %*% triangle
+  return(loadings[,1:n_loadings])
+  
 }
 
 # e.g.
-loadings.2 <- PCFA_loadings(air, 2, TRUE)
+loadings.2 <- PCFA_loadings(air, 2)
 loadings.2
 ```
 ### Get the varimax optimal loadings
 ```{r}
 # just run varimax(loadings)
-# note you will have to access your new loadings with $loadings
+# note you will have to access your new loadings with $loadings and the rotation of the loadings with $rotmat
 varimax(loadings.2)$loadings
 ```
+
 ```{r}
 # if you only want the loadings for variables in an array further restrict with this with [1:n_vars,]
 loadings.2.varimax <- varimax(loadings.2)$loadings[1:6,]
@@ -73,14 +83,14 @@ sigma_hat_sq = function(data, k){
   return(sigma_h_2)
 }
 
-sigma_hat_sq(air, 2)
+sigma_hat_sq(wine, 2)
 ```
 
 ## Principal Axis Factoring
-```{r}
-### Code from the lab sheet
 
-data= air
+Check below against assignment 2 answers
+```{r}
+data= wine
 k=2
 principal_axis_loadings <- function(data, k) {
   d=ncol(data)
@@ -95,8 +105,7 @@ principal_axis_loadings <- function(data, k) {
   return(Ahat)
 }
 
-principal_axis_loadings(air, 2)
-
+principal_axis_loadings(wine, 2)
 ```
 
 
@@ -111,4 +120,21 @@ factanal( air, factors = 2, rotation = "varimax", scores = "regression" )
 
 # varimax optimal oblique
 factanal( air, factors = 2, rotation = "promax", scores = "regression" )
+```
+
+Convert below to function
+```{r}
+wine_tests_table = data.frame()
+cultivar_tests_table = data.frame()
+for (i in 1:8) {
+  wine.factanal <- factanal(wine, i, rotation = "none")
+  wine.row <- data.frame(k=i, DoF = wine.factanal$dof, Test_Statistic = wine.factanal$STATISTIC,
+                         p_val = wine.factanal$PVAL)
+  wine_tests_table = rbind(wine_tests_table, wine.row)
+  
+  cultivar.factanal <- factanal(cultivar12, i, rotation = "none")
+  cultivar.row <- data.frame(k=i, DoF = cultivar.factanal$dof, Test_Statistic = cultivar.factanal$STATISTIC,
+                         p_val = cultivar.factanal$PVAL)
+  cultivar_tests_table = rbind(cultivar_tests_table, cultivar.row)
+}
 ```
