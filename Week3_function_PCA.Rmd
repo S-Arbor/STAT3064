@@ -58,10 +58,15 @@ pc$center - the mean value of each column in the initial data
 pc$scale - whether the data has been scaled
 pc$x - the PC scores for each observation
 
-## Scree plot - Cumulative contribution to total variance
+## Scree plot + Cumulative contribution to total variance
+```{r}
+## Scree plot
+plot(1:6, pc$sdev ** 2)
+```
+
 ```{r}
 scree_cum_prop_variance <- function(pc_obj, title="") {
-  cum_contri <- cumsum(pc_obj$sdev ** 2)
+  cum_contri <- cumsum(pc_obj$sdev ** 2) / sum(pc_obj$sdev ** 2)
   plot_df <- data.frame(idx = 1:6, cum_contri = cum_contri)
   ggplot(data = plot_df, aes(idx, cum_contri)) +
     geom_line() +

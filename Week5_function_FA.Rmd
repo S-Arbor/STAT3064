@@ -87,11 +87,7 @@ sigma_hat_sq(wine, 2)
 ```
 
 ## Principal Axis Factoring
-
-Check below against assignment 2 answers
 ```{r}
-data= wine
-k=2
 principal_axis_loadings <- function(data, k) {
   d=ncol(data)
   S = cov( data )
@@ -122,19 +118,24 @@ factanal( air, factors = 2, rotation = "varimax", scores = "regression" )
 factanal( air, factors = 2, rotation = "promax", scores = "regression" )
 ```
 
-Convert below to function
+## Hypothesis tests
+Chi-squared degrees of freedom
 ```{r}
-wine_tests_table = data.frame()
-cultivar_tests_table = data.frame()
-for (i in 1:8) {
-  wine.factanal <- factanal(wine, i, rotation = "none")
-  wine.row <- data.frame(k=i, DoF = wine.factanal$dof, Test_Statistic = wine.factanal$STATISTIC,
-                         p_val = wine.factanal$PVAL)
-  wine_tests_table = rbind(wine_tests_table, wine.row)
-  
-  cultivar.factanal <- factanal(cultivar12, i, rotation = "none")
-  cultivar.row <- data.frame(k=i, DoF = cultivar.factanal$dof, Test_Statistic = cultivar.factanal$STATISTIC,
-                         p_val = cultivar.factanal$PVAL)
-  cultivar_tests_table = rbind(cultivar_tests_table, cultivar.row)
+# note this must be positive
+chi_squared_df = function(d,k) {
+  return(0.5 * ((d-k)^2-(d+k)))
 }
+chi_squared_df(8,13)
+```
+To perform a hypothesis test, just call $STATISTIC or \$PVAL on a factanal object
+```{r}
+data= wine
+results_df = data.frame()
+for (i in 1:8) {
+  data.factanal <- factanal(data, i, rotation = "none")
+  new_row <- data.frame(k=i, DoF = data.factanal$dof, Test_Statistic = data.factanal$STATISTIC,
+                         p_val = data.factanal$PVAL)
+  results_df = rbind(results_df, new_row)
+}
+results_df
 ```
