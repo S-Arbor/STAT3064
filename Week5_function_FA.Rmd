@@ -129,6 +129,7 @@ chi_squared_df(8,13)
 ```
 To perform a hypothesis test, just call $STATISTIC or \$PVAL on a factanal object
 ```{r}
+## set the data to your data and this loop will perform a hypothesis test for each value of i
 data= wine
 results_df = data.frame()
 for (i in 1:8) {

@@ -159,6 +159,18 @@ h_cluster_within_boxplots = function(clusters, data, title = NULL, level = ncol(
 }
 ```
 
+## Pivot longer
+```{r}
+a <- h_cluster_get(q1a_dat, "euclidean", "complete", 12)
+a1 = as.data.frame( a ) %>%
+  pivot_longer(cols = 1:12,
+               names_to = "max_clust",
+               values_to = "cluster"
+               )
+conf = xtabs( ~ cluster + max_clust, a1 )
+conf[,c(1, 5:12, 2:4)]
+```
+
 
 
 
